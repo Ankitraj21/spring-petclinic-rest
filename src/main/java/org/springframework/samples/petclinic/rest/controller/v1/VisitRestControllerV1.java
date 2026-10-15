@@ -25,6 +25,7 @@ import org.springframework.samples.petclinic.rest.api.VisitsApi;
 import org.springframework.samples.petclinic.rest.dto.VisitDto;
 import org.springframework.samples.petclinic.rest.dto.VisitFieldsDto;
 import org.springframework.samples.petclinic.service.ClinicService;
+import org.springframework.samples.petclinic.service.VisitBookingValidator;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -46,9 +47,13 @@ public class VisitRestControllerV1 implements VisitsApi {
 
     private final VisitMapper visitMapper;
 
-    public VisitRestControllerV1(ClinicService clinicService, VisitMapper visitMapper) {
+    private final VisitBookingValidator visitBookingValidator;
+
+    public VisitRestControllerV1(ClinicService clinicService, VisitMapper visitMapper,
+                                 VisitBookingValidator visitBookingValidator) {
         this.clinicService = clinicService;
         this.visitMapper = visitMapper;
+        this.visitBookingValidator = visitBookingValidator;
     }
 
 
@@ -77,6 +82,7 @@ public class VisitRestControllerV1 implements VisitsApi {
     public ResponseEntity<VisitDto> addVisit(VisitDto visitDto) {
         HttpHeaders headers = new HttpHeaders();
         Visit visit = visitMapper.toVisit(visitDto);
+        visit.setPet(this.visitBookingValidator.validate(visitDto.petId(), visitDto.date(), null));
         this.clinicService.saveVisit(visit);
         visitDto = visitMapper.toVisitDto(visit);
         headers.setLocation(UriComponentsBuilder.newInstance().path("/api/visits/{id}").buildAndExpand(visit.getId()).toUri());
@@ -90,6 +96,7 @@ public class VisitRestControllerV1 implements VisitsApi {
         if (currentVisit == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+        this.visitBookingValidator.validate(currentVisit.getPet().getId(), visitDto.getDate(), visitId);
         currentVisit.setDate(visitDto.getDate());
         currentVisit.setDescription(visitDto.getDescription());
         this.clinicService.saveVisit(currentVisit);

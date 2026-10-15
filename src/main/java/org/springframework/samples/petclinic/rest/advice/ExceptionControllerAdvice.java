@@ -36,6 +36,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Global Exception handler for REST controllers.
@@ -52,6 +53,19 @@ public class ExceptionControllerAdvice {
     private static final String ERROR_UNEXPECTED = "An unexpected error occurred while processing your request";
     private static final String ERROR_DATA_INTEGRITY = "The requested resource could not be processed due to a data constraint violation";
     private static final String ERROR_INVALID_REQUEST = "The request contains invalid or missing parameters";
+
+    @ExceptionHandler(ResponseStatusException.class)
+    @ResponseBody
+    public ResponseEntity<ProblemDetail> handleResponseStatusException(
+        ResponseStatusException e, HttpServletRequest request) {
+        logger.warn("Request rejected at {} {}: {}", request.getMethod(), request.getRequestURI(), e.getReason());
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(e.getStatusCode(),
+            Objects.toString(e.getReason(), ERROR_INVALID_REQUEST));
+        detail.setTitle(e.getClass().getSimpleName());
+        detail.setProperty("timestamp", Instant.now());
+        detail.setProperty("schemaValidationErrors", List.<ValidationMessageDto>of());
+        return ResponseEntity.status(e.getStatusCode()).body(detail);
+    }
 
     /**
      * Private method for constructing the {@link ProblemDetail} object passing the name and details of the exception

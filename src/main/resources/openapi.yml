@@ -531,7 +531,7 @@ paths:
         - owners
       operationId: addVisitToOwner
       summary: Adds a vet visit
-      description: Records the details of a new vet visit.
+      description: Records a new vet visit. Rejects past dates, non-existent pets, and duplicate bookings for the same pet and date with HTTP 400.
       parameters:
         - name: ownerId
           in: path
@@ -1129,7 +1129,7 @@ paths:
         - visits
       operationId: addVisit
       summary: Create a visit
-      description: Creates a visit.
+      description: Creates a visit. Rejects past dates, non-existent pets, and duplicate bookings for the same pet and date with HTTP 400.
       requestBody:
         description: The visit
         content:
@@ -1138,8 +1138,8 @@ paths:
               $ref: '#/components/schemas/Visit'
         required: true
       responses:
-        200:
-          description: visit created successfully.
+        201:
+          description: Visit created successfully.
           headers:
             ETag:
               description: An ID for this version of the response.
@@ -1233,7 +1233,7 @@ paths:
         - visits
       operationId: updateVisit
       summary: Update a visit by ID
-      description: Returns the visit or a 404 error.
+      description: Updates the visit or returns a 404 error. Rejects past dates, non-existent pets, and duplicate bookings for the same pet and date with HTTP 400, excluding the visit being updated.
       parameters:
         - name: visitId
           in: path
@@ -1252,8 +1252,8 @@ paths:
               $ref: '#/components/schemas/VisitFields'
         required: true
       responses:
-        200:
-          description: Visit details found and returned.
+        204:
+          description: Visit updated successfully.
           headers:
             ETag:
               description: An ID for this version of the response.

@@ -91,6 +91,18 @@ API documentation (OAS 3.1) is accessible at: [http://localhost:9966/petclinic/v
 | **POST** | `/api/users` | Create a new user |
 
 
+### Visit booking validation
+
+Visit creation (including the owner-scoped endpoint) and updates reject past dates,
+non-existent pets, and another visit for the same pet on the same date with HTTP 400.
+The API stores dates only, so a booking slot is one calendar day. Updating a visit
+without changing its date does not conflict with itself. The optional date may
+still be omitted or null; an undated visit does not reserve a dated slot.
+Successful creation returns HTTP 201 and a `Location` header; updates return HTTP 204.
+
+Run the controller tests with `./mvnw test -Dtest=VisitRestControllerV1Tests,OwnerRestControllerV1Tests`
+(on Windows, use `.\mvnw.cmd`).
+
 ## Screenshot of the Angular client
 
 See its repository here: https://github.com/spring-petclinic/spring-petclinic-angular
