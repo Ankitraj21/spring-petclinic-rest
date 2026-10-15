@@ -110,44 +110,44 @@ class OwnerRestControllerV1Tests {
             .name("dog");
 
         pets = new ArrayList<>();
-        PetDto pet = new PetDto();
-        pets.add(pet.id(3)
-            .name("Rosy")
-            .birthDate(LocalDate.now())
-            .type(petType));
-
-        pet = new PetDto();
-        pets.add(pet.id(4)
-            .name("Jewel")
-            .birthDate(LocalDate.now())
-            .type(petType));
+        PetDto pet = new PetDto("Rosy", LocalDate.now(), petType, 3, null, List.of());
+        pets.add(pet);
+        pet = new PetDto("Jewel", LocalDate.now(), petType, 4, null, List.of());
+        pets.add(pet);
 
         visits = new ArrayList<>();
-        VisitDto visit = new VisitDto();
-        visit.setId(2);
-        visit.setPetId(pet.getId());
-        visit.setDate(LocalDate.now());
-        visit.setDescription("rabies shot");
-        visits.add(visit);
-
-        visit = new VisitDto();
-        visit.setId(3);
-        visit.setPetId(pet.getId());
-        visit.setDate(LocalDate.now());
-        visit.setDescription("neutered");
-        visits.add(visit);
+        visits.add(new VisitDto(LocalDate.now(), "rabies shot", 2, pet.id()));
+        visits.add(new VisitDto(LocalDate.now(), "neutered", 3, pet.id()));
     }
 
     private PetDto getTestPetWithIdAndName(final int id, final String name) {
         PetTypeDto petType = new PetTypeDto();
-        PetDto pet = new PetDto();
-        pet.id(id).name(name).birthDate(LocalDate.now()).type(petType.id(2).name("dog")).addVisitsItem(getTestVisitForPet(1));
-        return pet;
+        petType.id(2).name("dog");
+        return new PetDto(name, LocalDate.now(), petType, id, null, List.of(getTestVisitForPet(1)));
     }
 
     private VisitDto getTestVisitForPet(final int id) {
-        VisitDto visit = new VisitDto();
-        return visit.id(id).date(LocalDate.now()).description("test" + id);
+        return new VisitDto(LocalDate.now(), "test" + id, id, 1);
+    }
+
+    private PetDto withId(PetDto pet, Integer id) {
+        return new PetDto(pet.name(), pet.birthDate(), pet.type(), id, pet.ownerId(), pet.visits());
+    }
+
+    private PetDto withName(PetDto pet, String name) {
+        return new PetDto(name, pet.birthDate(), pet.type(), pet.id(), pet.ownerId(), pet.visits());
+    }
+
+    private PetDto withBirthDate(PetDto pet, LocalDate birthDate) {
+        return new PetDto(pet.name(), birthDate, pet.type(), pet.id(), pet.ownerId(), pet.visits());
+    }
+
+    private PetDto withType(PetDto pet, PetTypeDto type) {
+        return new PetDto(pet.name(), pet.birthDate(), type, pet.id(), pet.ownerId(), pet.visits());
+    }
+
+    private VisitDto withId(VisitDto visit, Integer id) {
+        return new VisitDto(visit.date(), visit.description(), id, visit.petId());
     }
 
     @Test
@@ -347,8 +347,7 @@ class OwnerRestControllerV1Tests {
     void testCreatePetSuccess() throws Exception {
         final Owner owner = ownerMapper.toOwner(owners.get(0));
         given(this.clinicService.findOwnerById(1)).willReturn(owner);
-        PetDto newPet = pets.get(0);
-        newPet.setId(999);
+        PetDto newPet = withId(pets.get(0), 999);
         ObjectMapper mapper =  JsonMapper.builder()
             .defaultDateFormat(new SimpleDateFormat("dd/MM/yyyy"))
             .build();
@@ -363,8 +362,7 @@ class OwnerRestControllerV1Tests {
     @WithMockUser(roles = "OWNER_ADMIN")
     void testCreatePetError() throws Exception {
         PetDto newPet = pets.get(0);
-        newPet.setId(null);
-        newPet.setName(null);
+        newPet = withName(withId(newPet, null), null);
         ObjectMapper mapper =  JsonMapper.builder()
             .defaultDateFormat(new SimpleDateFormat("dd/MM/yyyy"))
             .build();
@@ -378,7 +376,7 @@ class OwnerRestControllerV1Tests {
     @WithMockUser(roles = "OWNER_ADMIN")
     void testCreatePetShouldNotExposeTechnicalDetails() throws Exception {
         PetDto newPet = pets.get(0);
-        newPet.setId(null);
+        newPet = withId(newPet, null);
         ObjectMapper mapper =  JsonMapper.builder()
             .defaultDateFormat(new SimpleDateFormat("dd/MM/yyyy"))
             .build();
@@ -397,7 +395,7 @@ class OwnerRestControllerV1Tests {
     @WithMockUser(roles = "OWNER_ADMIN")
     void testCreatePetWithUnknownOwnerShouldReturnNotFound() throws Exception {
         PetDto newPet = pets.get(0);
-        newPet.setId(null);
+        newPet = withId(newPet, null);
         ObjectMapper mapper = JsonMapper.builder()
             .defaultDateFormat(new SimpleDateFormat("dd/MM/yyyy"))
             .build();
@@ -412,8 +410,7 @@ class OwnerRestControllerV1Tests {
     @WithMockUser(roles = "OWNER_ADMIN")
     void testCreatePetWithNullTypeShouldReturnBadRequestWithGenericDetail() throws Exception {
         PetDto newPet = pets.get(0);
-        newPet.setId(null);
-        newPet.setType(null);
+        newPet = withType(withId(newPet, null), null);
         ObjectMapper mapper = JsonMapper.builder()
             .defaultDateFormat(new SimpleDateFormat("dd/MM/yyyy"))
             .build();
@@ -435,8 +432,8 @@ class OwnerRestControllerV1Tests {
     @WithMockUser(roles = "OWNER_ADMIN")
     void testCreatePetWithEmptyTypeNameShouldReturnBadRequestWithGenericDetail() throws Exception {
         PetDto newPet = pets.get(0);
-        newPet.setId(null);
-        newPet.getType().setName("");
+        newPet = withId(newPet, null);
+        newPet.type().setName("");
         ObjectMapper mapper = JsonMapper.builder()
             .defaultDateFormat(new SimpleDateFormat("dd/MM/yyyy"))
             .build();
@@ -458,8 +455,8 @@ class OwnerRestControllerV1Tests {
     @WithMockUser(roles = "OWNER_ADMIN")
     void testCreatePetWithNullTypeIdShouldReturnBadRequestWithGenericDetail() throws Exception {
         PetDto newPet = pets.get(0);
-        newPet.setId(null);
-        newPet.getType().setId(null);
+        newPet = withId(newPet, null);
+        newPet.type().setId(null);
         ObjectMapper mapper = JsonMapper.builder()
             .defaultDateFormat(new SimpleDateFormat("dd/MM/yyyy"))
             .build();
@@ -481,7 +478,7 @@ class OwnerRestControllerV1Tests {
     @WithMockUser(roles = "OWNER_ADMIN")
     void testCreatePetWithUnexpectedErrorShouldReturnInternalServerErrorWithGenericDetail() throws Exception {
         PetDto newPet = pets.get(0);
-        newPet.setId(null);
+        newPet = withId(newPet, null);
         ObjectMapper mapper = JsonMapper.builder()
             .defaultDateFormat(new SimpleDateFormat("dd/MM/yyyy"))
             .build();
@@ -520,7 +517,7 @@ class OwnerRestControllerV1Tests {
     @WithMockUser(roles = "OWNER_ADMIN")
     void testCreateVisitSuccess() throws Exception {
         VisitDto newVisit = visits.get(0);
-        newVisit.setId(999);
+        newVisit = withId(newVisit, 999);
         ObjectMapper mapper = new ObjectMapper();
         String newVisitAsJSON = mapper.writeValueAsString(visitMapper.toVisit(newVisit));
         System.out.println("newVisitAsJSON " + newVisitAsJSON);
@@ -568,12 +565,10 @@ class OwnerRestControllerV1Tests {
     @WithMockUser(roles = "OWNER_ADMIN")
     void testUpdateOwnersPetSuccess() throws Exception {
         int ownerId = owners.get(0).getId();
-        int petId = pets.get(0).getId();
+        int petId = pets.get(0).id();
         given(this.clinicService.findOwnerById(ownerId)).willReturn(ownerMapper.toOwner(owners.get(0)));
         given(this.clinicService.findPetById(petId)).willReturn(petMapper.toPet(pets.get(0)));
-        PetDto updatedPetDto = pets.get(0);
-        updatedPetDto.setName("Rex");
-        updatedPetDto.setBirthDate(LocalDate.of(2020, 1, 15));
+        PetDto updatedPetDto = withBirthDate(withName(pets.get(0), "Rex"), LocalDate.of(2020, 1, 15));
         ObjectMapper mapper =  JsonMapper.builder()
             .defaultDateFormat(new SimpleDateFormat("dd/MM/yyyy"))
             .build();
@@ -589,10 +584,9 @@ class OwnerRestControllerV1Tests {
     @WithMockUser(roles = "OWNER_ADMIN")
     void testUpdateOwnersPetOwnerNotFound() throws Exception {
         int ownerId = 0;
-        int petId = pets.get(0).getId();
+        int petId = pets.get(0).id();
         given(this.clinicService.findOwnerById(ownerId)).willReturn(null);
-        PetDto petDto = pets.get(0);
-        petDto.setName("Thor");
+        PetDto petDto = withName(pets.get(0), "Thor");
         ObjectMapper mapper =  JsonMapper.builder()
             .defaultDateFormat(new SimpleDateFormat("dd/MM/yyyy"))
             .build();
@@ -610,9 +604,7 @@ class OwnerRestControllerV1Tests {
         int petId = 0;
         given(this.clinicService.findOwnerById(ownerId)).willReturn(ownerMapper.toOwner(owners.get(0)));
         given(this.clinicService.findPetById(petId)).willReturn(null);
-        PetDto petDto = pets.get(0);
-        petDto.setName("Ghost");
-        petDto.setBirthDate(LocalDate.of(2020, 1, 1));
+        PetDto petDto = withBirthDate(withName(pets.get(0), "Ghost"), LocalDate.of(2020, 1, 1));
         ObjectMapper mapper =  JsonMapper.builder()
             .defaultDateFormat(new SimpleDateFormat("dd/MM/yyyy"))
             .build();

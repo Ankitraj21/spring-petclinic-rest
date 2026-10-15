@@ -90,17 +90,12 @@ class PetRestControllerV1Tests {
         petType.id(2)
             .name("dog");
 
-        PetDto pet = new PetDto();
-        pets.add(pet.id(3)
-            .name("Rosy")
-            .birthDate(LocalDate.now())
-            .type(petType));
+        pets.add(new PetDto("Rosy", LocalDate.now(), petType, 3, null, List.of()));
+        pets.add(new PetDto("Jewel", LocalDate.now(), petType, 4, null, List.of()));
+    }
 
-        pet = new PetDto();
-        pets.add(pet.id(4)
-            .name("Jewel")
-            .birthDate(LocalDate.now())
-            .type(petType));
+    private PetDto withName(PetDto pet, String name) {
+        return new PetDto(name, pet.birthDate(), pet.type(), pet.id(), pet.ownerId(), pet.visits());
     }
 
     @Test
@@ -154,8 +149,7 @@ class PetRestControllerV1Tests {
     @WithMockUser(roles = "OWNER_ADMIN")
     void testUpdatePetSuccess() throws Exception {
         given(this.clinicService.findPetById(3)).willReturn(petMapper.toPet(pets.get(0)));
-        PetDto newPet = pets.get(0);
-        newPet.setName("Rosy I");
+        PetDto newPet = withName(pets.get(0), "Rosy I");
         ObjectMapper mapper =  JsonMapper.builder()
             .defaultDateFormat(new SimpleDateFormat("dd/MM/yyyy"))
             .build();
@@ -178,8 +172,7 @@ class PetRestControllerV1Tests {
     @Test
     @WithMockUser(roles = "OWNER_ADMIN")
     void testUpdatePetError() throws Exception {
-        PetDto newPet = pets.get(0);
-        newPet.setName(null);
+        PetDto newPet = withName(pets.get(0), null);
         ObjectMapper mapper =  JsonMapper.builder()
             .defaultDateFormat(new SimpleDateFormat("dd/MM/yyyy"))
             .build();
@@ -188,6 +181,19 @@ class PetRestControllerV1Tests {
         this.mockMvc.perform(put("/api/pets/3")
                 .content(newPetAsJSON).accept(MediaType.APPLICATION_JSON_VALUE).contentType(MediaType.APPLICATION_JSON_VALUE))
             .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testUpdatePetWithNameOutsideBoundaryReturnsBadRequest() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        String newPetAsJSON = mapper.writeValueAsString(pets.get(0))
+            .replace("\"name\":\"Rosy\"", "\"name\":\"" + "x".repeat(31) + "\"");
+
+        this.mockMvc.perform(put("/api/pets/3")
+                .content(newPetAsJSON).accept(MediaType.APPLICATION_JSON_VALUE).contentType(MediaType.APPLICATION_JSON_VALUE))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("HttpMessageNotReadableException"));
     }
 
     @Test

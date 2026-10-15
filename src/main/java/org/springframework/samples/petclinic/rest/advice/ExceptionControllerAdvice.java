@@ -28,6 +28,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.samples.petclinic.rest.controller.BindingErrorsResponse;
 import org.springframework.samples.petclinic.rest.dto.ValidationMessageDto;
 import org.springframework.validation.BindingResult;
@@ -144,7 +145,31 @@ public class ExceptionControllerAdvice {
             detail.setProperty("schemaValidationErrors", schemaValidationErrors);
             return ResponseEntity.status(status).body(detail);
         }
+
         return ResponseEntity.status(status).body(detail);
+    }
+
+    /**
+     * Handles malformed bodies and record-constructor validation failures.
+     *
+     * @param e exception raised while reading the request body
+     * @param request current HTTP request
+     * @return a 400 Bad Request response
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseBody
+    public ResponseEntity<ProblemDetail> handleHttpMessageNotReadableException(
+        final HttpMessageNotReadableException e,
+        final HttpServletRequest request) {
+        logger.warn("Invalid request body at {} {}",
+            request.getMethod(),
+            request.getRequestURI());
+        ProblemDetail detail = this.detailBuild(
+            e,
+            HttpStatus.BAD_REQUEST,
+            request.getRequestURL(),
+            ERROR_INVALID_REQUEST);
+        return ResponseEntity.badRequest().body(detail);
     }
 
 }

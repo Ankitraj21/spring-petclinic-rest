@@ -366,6 +366,8 @@
                             <generateModels>true</generateModels>
                             <modelPackage>org.springframework.samples.petclinic.rest.dto</modelPackage>
                             <generateApis>true</generateApis>
+                            <!-- Pet and Visit DTOs are maintained as records in src/main/java. -->
+                            <ignoreFileOverride>${project.basedir}/.openapi-generator-ignore</ignoreFileOverride>
                             <importMappings>
                                 <importMapping>Nullable=org.jspecify.annotations.Nullable</importMapping>
                             </importMappings>
